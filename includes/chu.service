@@ -1,0 +1,16 @@
+[Unit]
+Description=File uploader
+After=network.target
+
+[Service]
+Type=simple
+User=welpo
+Group=users
+Environment="VENVDIR=/home/welpo/chu/chuvenv" "BINDIR=/home/welpo/chu"
+ExecStart=/bin/bash -c "cd $BINDIR && source $VENVDIR/bin/activate && /home/welpo/chu/chuvenv/bin/uwsgi --ini /home/welpo/chu/chu.ini"
+
+# Give a reasonable amount of time for the server to start up/shut down
+TimeoutSec=20
+
+[Install]
+WantedBy=multi-user.target
