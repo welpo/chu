@@ -46,7 +46,16 @@ def postprocess(extension, output):
 def upload_file():
     if request.method == 'POST':
         # Get info from the POST request
-        file = request.files['file']
+        try:
+            file = request.files['file']
+        except:
+            return '''<html>
+<head><title>405 Not Allowed</title></head>
+<body bgcolor="white">
+<center><h1>405 Not Allowed</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>'''
         # Use .get('field_name') instead of 'request.form['field_name'] to make it optional: It returns
         # None instead of KeyError when the field is not sent
         custom_extension = request.form.get('custom_extension')
@@ -92,8 +101,14 @@ def upload_file():
             postprocess(extension, output)
             return redirect(url_for('uploaded_file',
                                     filename=filename))
+
     return '''
 <!doctype html>
+<link rel="icon"
+type="favicon-icon"
+href="https://welpo.me/sponge.ico">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
 <title>chu~</title>
 <div align=center><h1>こんにちは！</h1>
 <img src=/main.gif alt=3,14 /></div>
