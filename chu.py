@@ -4,6 +4,7 @@
 # TODO: Make local chu app allow input from nano etc., like nani can
 import os
 import subprocess
+from flask.ext.scrypt import check_password_hash
 from tempfile import mkstemp
 from flask import Flask, request, redirect, url_for
 from werkzeug import secure_filename
@@ -20,6 +21,10 @@ OPTIPNG_EXTENSIONS = set(['png', 'bmp', 'gif', 'pnm', 'tiff'])
 
 PURGE_EXTENSIONS = set(['3gp', 'f4v', 'm4a', 'm4p', 'pdf', 'gif', 'jpg', 'jpeg',
                         'm4v', 'mov', 'mp4', 'psd', 'tiff', 'tif', 'png'])
+
+# Salt and password_hash generated with flask.ext.scrypt's generate_random_salt and generate_password_hash
+SALT = 'ByLHJ1hT8KpidMQHilH4can0evXJ8LS0oTnDXsWLIVjls5E+N5NXm39mB/0xuchRXonasEXHRmixWV1HVADtWQ=='
+PASSWORD_HASH = 'Nk/MQ85UMKSrLLzk0PgEJo6CzI+mLvKCsXeINgg69oz87BOC7qoRcmWc3tFp80b3iy7R9K/HyFgaVQLthZEzIQ=='
 
 app = Flask(__name__)
 app.debug = True
@@ -45,17 +50,18 @@ def postprocess(extension, output):
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
-        # Get info from the POST request
-        try:
-            file = request.files['file']
-        except:
+        # Check whether or not the user is allowed
+        password = request.form.get('password')
+        if not check_password_hash(password, PASSWORD_HASH, SALT):
             return '''<html>
-<head><title>405 Not Allowed</title></head>
-<body bgcolor="white">
-<center><h1>405 Not Allowed</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>'''
+    <head><title>405 Not Allowed</title></head>
+    <body bgcolor="white">
+    <center><h1>405 Not Allowed</h1></center>
+    <hr><center>nginx</center>
+    </body>
+    </html>'''
+        # Get info from the POST request
+        file = request.files['file']
         # Use .get('field_name') instead of 'request.form['field_name'] to make it optional: It returns
         # None instead of KeyError when the field is not sent
         custom_extension = request.form.get('custom_extension')
@@ -73,11 +79,10 @@ def upload_file():
                     extension = 'txt'
 
             # Either create random name or keep the one sent, after securing it
-            if preserve_filename or custom_filename:
-                if custom_filename:
-                    filename = secure_filename(custom_filename) + "." + extension
-                else:
-                    filename = secure_filename(file.filename)
+            if custom_filename:
+                filename = secure_filename(custom_filename) + "." + extension
+            elif preserve_filename:
+                filename = secure_filename(file.filename)
                 output = (os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 # If output name already exists, create a temporary file with prepending the random
                 # string and using the original name as a suffix (preceded by an underscore)
@@ -88,8 +93,6 @@ def upload_file():
                     filename = os.path.basename(output)
                 else:
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            elif custom_filename:
-                filename = secure_filename(custom_filename)
             else:
                 # Create temp file safely and store its path
                 output = mkstemp(suffix="." + extension,
