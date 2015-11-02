@@ -1,7 +1,4 @@
 # coding: utf-8
-# TODO: rmm app, local sends to server (just call rmm and send output like uguu, plaintext "Reminder set to ..."
-# TODO: Require private key thingy/password. user (me) sends field pass=_____ and the SHA256 of that gets compared to the one stored here, so that only one key/person can use it (could do the same for remote nani, a bit more secure)
-# TODO: Make local chu app allow input from nano etc., like nani can
 import os
 import subprocess
 from flask.ext.scrypt import check_password_hash
