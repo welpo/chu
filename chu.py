@@ -1,9 +1,11 @@
 # coding: utf-8
 import os
 import subprocess
+import re
+# import logging
 from flask.ext.scrypt import check_password_hash
 from tempfile import mkstemp
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, abort, make_response
 from werkzeug import secure_filename
 
 UPLOAD_FOLDER = '/home/welpo/chu/uploads'
@@ -12,12 +14,18 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webm',
                           'mp4', 'zip', 'rar', 'doc', 'docx', 'flac', 'mp3',
                           'bmp', 'pnm', 'tiff', '3gp', 'f4v', 'm4a', 'm4p',
                           'm4v', 'mov', 'psd', 'tiff', 'tif', 'mkv', 'deb',
-                          'ogg', 'sh'])
+                          'ogg', 'sh', 'aiff'])
 
 OPTIPNG_EXTENSIONS = set(['png', 'bmp', 'gif', 'pnm', 'tiff'])
 
 PURGE_EXTENSIONS = set(['3gp', 'f4v', 'm4a', 'm4p', 'pdf', 'gif', 'jpg', 'jpeg',
                         'm4v', 'mov', 'mp4', 'psd', 'tiff', 'tif', 'png'])
+
+# Files that modern browsers should be able to show on the browser without the need to download them
+STREAMABLE_EXTENSIONS = set(['png', 'bmp', 'gif', 'tiff', 'mov', 'mp4', '3gp',
+                             'jpg', 'jpeg', 'ogg', 'mp3', 'm4a', 'pdf', 'gif',
+                             'txt'])
+
 
 # Salt and password_hash generated with flask.ext.scrypt's generate_random_salt and generate_password_hash
 SALT = 'ByLHJ1hT8KpidMQHilH4can0evXJ8LS0oTnDXsWLIVjls5E+N5NXm39mB/0xuchRXonasEXHRmixWV1HVADtWQ=='
@@ -36,12 +44,26 @@ def allowed_file(filename):
 
 
 def postprocess(extension, output):
-    # Optimise png, tiff...
-    if extension.lower() in OPTIPNG_EXTENSIONS:
-        subprocess.call(["optipng", output])
     # Remove metadata from files (images and videos)
     if extension.lower() in PURGE_EXTENSIONS:
+        app.logger.info('Attempting exiftool purge')
         subprocess.call(["exiftool", "-overwrite_original", "-all=", output])
+
+    # Optimise png, tiff...
+    if extension.lower() in OPTIPNG_EXTENSIONS:
+        app.logger.info('Optimising PNG size with optipng')
+        subprocess.call(["optipng", output])
+
+    # Use lepton to compress JPG files
+    if extension.lower() in ('jpg', 'jpeg'):
+        # We need the extensionless name to compare it to the .lep
+        filename_without_extension = output.rsplit('.', 1)[0]
+        app.logger.info('Compressing JPG with Lepton')
+        subprocess.call(["/home/welpo/bin/lepton", output])
+        # Check if .lep file was successfully created (lepton will create a 0 bit file even if it fails)
+        if os.stat(os.path.join(app.config['UPLOAD_FOLDER'], filename_without_extension + '.lep')) != 0:
+            # Delete the JPG
+            os.remove(output)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -50,13 +72,7 @@ def upload_file():
         # Check whether or not the user is allowed
         password = request.form.get('password')
         if not check_password_hash(password, PASSWORD_HASH, SALT):
-            return '''<html>
-    <head><title>405 Not Allowed</title></head>
-    <body bgcolor="white">
-    <center><h1>405 Not Allowed</h1></center>
-    <hr><center>nginx</center>
-    </body>
-    </html>'''
+            return abort(405)
         # Get info from the POST request
         file = request.files['file']
         # Use .get('field_name') instead of 'request.form['field_name'] to make it optional: It returns
@@ -69,10 +85,10 @@ def upload_file():
             if custom_extension in ALLOWED_EXTENSIONS:
                 extension = custom_extension
             else:
-                try:
+                if re.search(r'\..', file.filename):
                     extension = file.filename.rsplit('.', 1)[1]
                 # This adds .txt extension to extensionless files
-                except:
+                else:
                     extension = 'txt'
 
             # Either create random name or keep the one sent, after securing it
@@ -81,7 +97,7 @@ def upload_file():
             elif preserve_filename:
                 filename = secure_filename(file.filename)
                 output = (os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                # If output name already exists, create a temporary file with prepending the random
+                # If output name already exists, create a temporary file, prepending the random
                 # string and using the original name as a suffix (preceded by an underscore)
                 if os.path.exists(output):
                     output = mkstemp(prefix="", dir=app.config['UPLOAD_FOLDER'],
@@ -97,10 +113,17 @@ def upload_file():
                 filename = os.path.basename(output)
                 file.save(output)
 
-            # Optimise png, tiff etc and remove metadata from files (images and videos)
+            # Optimise png, tiff etc, remove metadata from files (images and videos) and compress JPGs
             postprocess(extension, output)
-            return redirect(url_for('uploaded_file',
-                                    filename=filename))
+
+            # If a modern browser should be able to display the file, redirect to it
+            if extension.lower() in STREAMABLE_EXTENSIONS:
+                return redirect(url_for('download_file',
+                                        filename=filename))
+            # Otherwise, return the URL of the uploaded file in plain text
+            return str(request.base_url) + str(filename) + ''
+        else:
+            return abort(403)
 
     return '''
 <!doctype html>
@@ -111,14 +134,41 @@ href="https://welpo.me/sponge.ico">
 <meta charset="utf-8">
 <title>chu~</title>
 <div align=center><h1>こんにちは！</h1>
-<img src=/main.gif alt=3,14 /></div>
+<img src=https://welpo.me/main.gif alt=3,14 /></div>
 '''
 
 from flask import send_from_directory
 
 
 @app.route('/<filename>')
-def uploaded_file(filename):
+def download_file(filename):
+    # Get the extension of the file requested as well as the extensionless name
+    extension = filename.rsplit('.', 1)[1]
+    filename_without_extension = filename.rsplit('.', 1)[0]
+
+    # If it's a jpg, try to find the .lep that matches the name and stream that into the browser
+    if extension == 'jpg':
+        app.logger.info('JPG file requested, attempting to find matching .lep for "' +
+                        filename + '"')
+        # The file we will be looking for (same name, just different extension)
+        matching_lep = (os.path.join(app.config['UPLOAD_FOLDER'],
+                                     filename_without_extension + '.lep'))
+
+        # See if the .lep file exists. If it does, call lepton to process it
+        if os.path.isfile(matching_lep):
+            app.logger.info('Found matching file: ' + matching_lep)
+            args = ['/home/welpo/bin/lepton', '-']
+            with open(matching_lep, 'r') as inf:
+                proc = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=inf)
+                # output = proc.stdout.read()
+                output = subprocess.Popen.communicate(proc)
+                proc.wait()
+                app.logger.info('Lepton finished processing ' + filename)
+            response = make_response(output)
+            # Set the proper JPG headers to avoid sending it as octet-stream
+            response.headers.set('Content-Type', 'image/jpeg')
+            return response
+
     return send_from_directory(app.config['UPLOAD_FOLDER'],
                                filename)
 
