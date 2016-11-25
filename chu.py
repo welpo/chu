@@ -61,9 +61,11 @@ def postprocess(extension, output):
         app.logger.info('Compressing JPG with Lepton')
         subprocess.call(["/home/welpo/bin/lepton", output])
         # Check if .lep file was successfully created (lepton will create a 0 bit file even if it fails)
-        if os.stat(os.path.join(app.config['UPLOAD_FOLDER'], filename_without_extension + '.lep')) != 0:
+        if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename_without_extension + '.lep')) and os.stat(os.path.join(app.config['UPLOAD_FOLDER'], filename_without_extension + '.lep')) != 0:
             # Delete the JPG
             os.remove(output)
+        else:
+            app.logger.error('No matching .lep found, returning .jpg')
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -147,7 +149,7 @@ def download_file(filename):
     filename_without_extension = filename.rsplit('.', 1)[0]
 
     # If it's a jpg, try to find the .lep that matches the name and stream that into the browser
-    if extension == 'jpg':
+    if extension == 'jpg' or extension == 'jpeg':
         app.logger.info('JPG file requested, attempting to find matching .lep for "' +
                         filename + '"')
         # The file we will be looking for (same name, just different extension)
