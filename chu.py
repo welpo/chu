@@ -14,7 +14,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webm',
                           'mp4', 'zip', 'rar', 'doc', 'docx', 'flac', 'mp3',
                           'bmp', 'pnm', 'tiff', '3gp', 'f4v', 'm4a', 'm4p',
                           'm4v', 'mov', 'psd', 'tiff', 'tif', 'mkv', 'deb',
-                          'ogg', 'sh', 'aiff'])
+                          'ogg', 'sh', 'aiff', 'svg'])
 
 OPTIPNG_EXTENSIONS = set(['png', 'bmp', 'gif', 'pnm', 'tiff'])
 
