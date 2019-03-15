@@ -2,7 +2,7 @@
 import os
 import subprocess
 import re
-# import logging
+import logging
 from flask.ext.scrypt import check_password_hash
 from tempfile import mkstemp
 from flask import Flask, request, redirect, url_for, abort, make_response
@@ -14,7 +14,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webm',
                           'mp4', 'zip', 'rar', 'doc', 'docx', 'flac', 'mp3',
                           'bmp', 'pnm', 'tiff', '3gp', 'f4v', 'm4a', 'm4p',
                           'm4v', 'mov', 'psd', 'tiff', 'tif', 'mkv', 'deb',
-                          'ogg', 'sh', 'aiff', 'svg'])
+                          'ogg', 'sh', 'aiff', 'svg', 'dmg'])
 
 OPTIPNG_EXTENSIONS = set(['png', 'bmp', 'gif', 'pnm', 'tiff'])
 
@@ -24,7 +24,7 @@ PURGE_EXTENSIONS = set(['3gp', 'f4v', 'm4a', 'm4p', 'pdf', 'gif', 'jpg', 'jpeg',
 # Files that modern browsers should be able to show on the browser without the need to download them
 STREAMABLE_EXTENSIONS = set(['png', 'bmp', 'gif', 'tiff', 'mov', 'mp4', '3gp',
                              'jpg', 'jpeg', 'ogg', 'mp3', 'm4a', 'pdf', 'gif',
-                             'txt'])
+                             'txt', 'webm'])
 
 
 # Salt and password_hash generated with flask.ext.scrypt's generate_random_salt and generate_password_hash
@@ -47,7 +47,7 @@ def postprocess(extension, output):
     # Remove metadata from files (images and videos)
     if extension.lower() in PURGE_EXTENSIONS:
         app.logger.info('Attempting exiftool purge')
-        subprocess.call(["exiftool", "-overwrite_original", "-all=", output])
+        subprocess.call(["exiftool", "-overwrite_original", "-all=", "-tagsfromfile", "@", "-Orientation", "FILE",  output])
 
     # Optimise png, tiff...
     if extension.lower() in OPTIPNG_EXTENSIONS:
@@ -82,6 +82,7 @@ def upload_file():
         custom_extension = request.form.get('custom_extension')
         preserve_filename = request.form.get('preserve_filename')
         custom_filename = request.form.get('custom_filename')
+        do_not_redirect = request.form.get('do_not_redirect')
 
         if file and (allowed_file(file.filename) or custom_extension):
             if custom_extension in ALLOWED_EXTENSIONS:
@@ -118,25 +119,31 @@ def upload_file():
             # Optimise png, tiff etc, remove metadata from files (images and videos) and compress JPGs
             postprocess(extension, output)
 
-            # If a modern browser should be able to display the file, redirect to it
-            if extension.lower() in STREAMABLE_EXTENSIONS:
-                return redirect(url_for('download_file',
-                                        filename=filename))
-            # Otherwise, return the URL of the uploaded file in plain text
-            return str(request.base_url) + str(filename) + ''
+            if do_not_redirect:
+                # Return the URL of the uploaded file in plain text
+                # app.logger.info('do_not_redirect is defined')
+                full_url =  str(request.base_url) + str(filename) + ''
+                return full_url.replace(" ", "")
+            else:
+                # If a modern browser should be able to display the file, redirect to it
+                # app.logger.info('do_not_redirect undefined')
+                if extension.lower() in STREAMABLE_EXTENSIONS:
+                    return redirect(url_for('download_file',
+                                            filename=filename))
         else:
             return abort(403)
 
     return '''
 <!doctype html>
-<link rel="icon"
-type="favicon-icon"
-href="https://welpo.me/sponge.ico">
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
+<link rel="icon"
+type="favicon-icon"
+href="https://osc.pizza/sponge.ico">
+<meta name="robots" content="noindex, noimageindex, nofollow">
 <title>chu~</title>
 <div align=center><h1>こんにちは！</h1>
-<img src=https://welpo.me/main.gif alt=3,14 /></div>
+<img src=https://osc.pizza/main.gif alt=3,14 /></div>
 '''
 
 from flask import send_from_directory
@@ -172,7 +179,7 @@ def download_file(filename):
             return response
 
     return send_from_directory(app.config['UPLOAD_FOLDER'],
-                               filename)
+                           filename)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
