@@ -47,7 +47,7 @@ def postprocess(extension, output):
     # Remove metadata from files (images and videos)
     if extension.lower() in PURGE_EXTENSIONS:
         app.logger.info('Attempting exiftool purge')
-        subprocess.call(["exiftool", "-overwrite_original", "-all=", "-tagsfromfile", "@", "-Orientation",  output])
+        subprocess.call(["exiftool", "-overwrite_original", "-all=", "-tagsfromfile", "@", "-Orientation", "-icc_profile", output])
 
     # Optimise png, tiff...
     if extension.lower() in OPTIPNG_EXTENSIONS:
