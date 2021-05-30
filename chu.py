@@ -3,10 +3,10 @@ import os
 import subprocess
 import re
 import logging
-from flask.ext.scrypt import check_password_hash
+from flask_scrypt import check_password_hash
 from tempfile import mkstemp
 from flask import Flask, request, redirect, url_for, abort, make_response
-from werkzeug import secure_filename
+from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = '/home/welpo/chu/uploads'
 
@@ -14,7 +14,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webm',
                           'mp4', 'zip', 'rar', 'doc', 'docx', 'flac', 'mp3',
                           'bmp', 'pnm', 'tiff', '3gp', 'f4v', 'm4a', 'm4p',
                           'm4v', 'mov', 'psd', 'tiff', 'tif', 'mkv', 'deb',
-                          'ogg', 'sh', 'aiff', 'svg', 'dmg'])
+                          'ogg', 'sh', 'aiff', 'svg', 'dmg', 'heif', 'heic'])
 
 OPTIPNG_EXTENSIONS = set(['png', 'bmp', 'gif', 'pnm', 'tiff'])
 
@@ -27,7 +27,7 @@ STREAMABLE_EXTENSIONS = set(['png', 'bmp', 'gif', 'tiff', 'mov', 'mp4', '3gp',
                              'txt', 'webm'])
 
 
-# Salt and password_hash generated with flask.ext.scrypt's generate_random_salt and generate_password_hash
+# Salt and password_hash generated with flask_scrypt's generate_random_salt and generate_password_hash
 SALT = 'ByLHJ1hT8KpidMQHilH4can0evXJ8LS0oTnDXsWLIVjls5E+N5NXm39mB/0xuchRXonasEXHRmixWV1HVADtWQ=='
 PASSWORD_HASH = 'Nk/MQ85UMKSrLLzk0PgEJo6CzI+mLvKCsXeINgg69oz87BOC7qoRcmWc3tFp80b3iy7R9K/HyFgaVQLthZEzIQ=='
 
@@ -123,7 +123,7 @@ def upload_file():
                 # Return the URL of the uploaded file in plain text
                 # app.logger.info('do_not_redirect is defined')
                 full_url =  str(request.base_url) + str(filename) + ''
-                return full_url.replace(" ", "")
+                return full_url.strip()
             else:
                 # If a modern browser should be able to display the file, redirect to it
                 # app.logger.info('do_not_redirect undefined')
