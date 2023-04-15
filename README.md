@@ -1,5 +1,8 @@
 # chu
+
 A file uploader built with Python, Flask, and uWSGI, based on https://flask.palletsprojects.com/en/2.0.x/patterns/fileuploads/
+
+![chu](https://user-images.githubusercontent.com/6399341/232255763-de4010c9-93fb-4cb4-bc7d-973c4fce2ed5.png)
 
 ## Features
 - Metadata Purging: Removes metadata from uploaded files (except color profile and orientation).
