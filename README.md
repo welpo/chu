@@ -1,15 +1,24 @@
 # chu
-File uploader using python, flask and uwsgi. Based on https://flask.palletsprojects.com/en/2.0.x/patterns/fileuploads/
+A file uploader built with Python, Flask, and uWSGI, based on https://flask.palletsprojects.com/en/2.0.x/patterns/fileuploads/
 
-# Features
-- Purges metadata (except colour profile, orientation).
-- Saves ups space by losslessly compressing png and other files through [optipng](http://optipng.sourceforge.net/).
-- Integrates [Dropbox's Lepton](https://github.com/dropbox/lepton) to losslessly compress JPEGs and save ~22% of space.
-- Random URL/filename through temp files (unless requested otherwise; then it secures the requested filename).
-- Predefined max size limit for each upload.
-- Restricted to only allow certain extensions.
-- Authentication required (include password in curl request).
-- Returns the URL pointing to the file uploaded.
+## Features
+- Metadata Purging: Removes metadata from uploaded files (except color profile and orientation).
+- Space Optimization: Losslessly compresses PNG and other file formats using [optipng](http://optipng.sourceforge.net/).
+- JPEG Compression: Integrates [Dropbox's Lepton](https://github.com/dropbox/lepton) for lossless JPEG compression, saving approximately 22% of space.
+- Filename Handling: Generates random URL/filenames using temporary files, or secures user-requested filenames if provided.
+- Upload Size Limit: Enforces a predefined maximum size limit for each uploaded file.
+- Extension Control: Restricts uploads to only allow specific file extensions.
+- Authentication: Requires a password to be included in the cURL request for uploading files.
+- URL Response: Returns the URL pointing to the successfully uploaded file.
 
-# Todo
-- Remove hardcoded variables 
+## Dependencies
+
+- Python 3
+- Flask
+- uWSGI
+- [optipng](https://optipng.sourceforge.net/)
+- [Dropbox's Lepton](https://github.com/dropbox/lepton)
+
+## License
+
+This code is licensed under the GNU General Public License version 3.

@@ -1,12 +1,27 @@
+# Copyright (C) 2023  welpo
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 # coding: utf-8
 import os
 import subprocess
 import re
-import logging
-from flask_scrypt import check_password_hash
+import configparser
 from tempfile import mkstemp
 from flask import Flask, request, redirect, url_for, abort, make_response
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
 
 UPLOAD_FOLDER = '/home/welpo/chu/uploads'
 
@@ -27,14 +42,17 @@ STREAMABLE_EXTENSIONS = set(['png', 'bmp', 'gif', 'tiff', 'mov', 'mp4', '3gp',
                              'txt', 'webm'])
 
 
-# Salt and password_hash generated with flask_scrypt's generate_random_salt and generate_password_hash
-SALT = 'ByLHJ1hT8KpidMQHilH4can0evXJ8LS0oTnDXsWLIVjls5E+N5NXm39mB/0xuchRXonasEXHRmixWV1HVADtWQ=='
-PASSWORD_HASH = 'Nk/MQ85UMKSrLLzk0PgEJo6CzI+mLvKCsXeINgg69oz87BOC7qoRcmWc3tFp80b3iy7R9K/HyFgaVQLthZEzIQ=='
+# Read the configuration file
+config = configparser.ConfigParser()
+config.read('chu.ini')
+# Get the PWHASH from the configuration file
+# Hashed string generated with werkzeug.security.generate_password_hash
+PWHASH = config.get('Security', 'PWHASH')
 
 app = Flask(__name__)
 app.debug = True
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # First number after equals sign is max filesize in MiB
+app.config['MAX_CONTENT_LENGTH'] = 800 * 1024 * 1024  # First number after equals sign is max filesize in MiB
 
 
 def allowed_file(filename):
@@ -73,7 +91,7 @@ def upload_file():
     if request.method == 'POST':
         # Check whether or not the user is allowed
         password = request.form.get('password')
-        if not check_password_hash(password, PASSWORD_HASH, SALT):
+        if not check_password_hash(PWHASH, password):
             return abort(405)
         # Get info from the POST request
         file = request.files['file']
@@ -96,25 +114,41 @@ def upload_file():
 
             # Either create random name or keep the one sent, after securing it
             if custom_filename:
+                # Create a filename using the custom filename provided and add the extension
                 filename = secure_filename(custom_filename) + "." + extension
-            elif preserve_filename:
-                filename = secure_filename(file.filename)
-                output = (os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                # If output name already exists, create a temporary file, prepending the random
-                # string and using the original name as a suffix (preceded by an underscore)
+                # Set the output path for the file in the upload folder
+                output = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                # Check if a file with the same name already exists
                 if os.path.exists(output):
-                    output = mkstemp(prefix="", dir=app.config['UPLOAD_FOLDER'],
-                                     suffix="_" + filename)[1]
-                    file.save(output)
-                    filename = os.path.basename(output)
-                else:
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            else:
-                # Create temp file safely and store its path
-                output = mkstemp(suffix="." + extension,
-                                 dir=app.config['UPLOAD_FOLDER'], prefix="")[1]
-                filename = os.path.basename(output)
+                    # If it exists, create a temporary file with a unique name
+                    fd, output = mkstemp(prefix="", dir=app.config['UPLOAD_FOLDER'],
+                                        suffix="_" + filename)
+                    os.close(fd)  # Close the file descriptor as it's not being used
+                    # Update the filename variable with the new unique filename
+                    filename = os.path.basename(output)  # <-- Add this line
+                # Save the uploaded file to the output path
                 file.save(output)
+            elif preserve_filename:
+                # Use the original filename of the uploaded file
+                filename = secure_filename(file.filename)
+                # Set the output path for the file in the upload folder
+                output = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                # Check if a file with the same name already exists
+                if os.path.exists(output):
+                    # If it exists, create a temporary file with a unique name
+                    output = mkstemp(prefix="", dir=app.config['UPLOAD_FOLDER'],
+                                    suffix="_" + filename)[1]
+                # Save the uploaded file to the output path
+                file.save(output)
+            else:
+                # Create a temporary file with a unique name and the correct extension
+                output = mkstemp(suffix="." + extension,
+                                dir=app.config['UPLOAD_FOLDER'], prefix="")[1]
+                # Get the filename of the temporary file
+                filename = os.path.basename(output)
+                # Save the uploaded file to the output path
+                file.save(output)
+
 
             # Optimise png, tiff etc, remove metadata from files (images and videos) and compress JPGs
             postprocess(extension, output)
@@ -133,18 +167,10 @@ def upload_file():
         else:
             return abort(403)
 
-    return '''
-<!doctype html>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<meta charset="utf-8">
-<link rel="icon"
-type="favicon-icon"
-href="https://osc.pizza/sponge.ico">
-<meta name="robots" content="noindex, noimageindex, nofollow">
-<title>chu~</title>
-<div align=center><h1>こんにちは！</h1>
-<img src=https://osc.pizza/main.gif alt=3,14 /></div>
-'''
+    with open('index.html', 'r') as f:
+        html_content = f.read()
+    return html_content
+
 
 from flask import send_from_directory
 

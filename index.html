@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>chu • File Uploader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #FFD4D4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            border-radius: 5px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+            width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin: 6px 0;
+            box-sizing: border-box;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        input[type="file"] {
+            margin: 6px 0;
+            position: relative;
+            overflow: hidden;
+            background-color: #fffbfe;
+            border-radius: 25px;
+            padding: 4rem;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        input[type="file"]:before {
+            content: 'Browse';
+        }
+
+        label {
+            align-self: flex-start;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            margin-right: 6px;
+        }
+
+        label > span {
+            margin-left: 10px;
+        }
+
+
+        input[type="submit"] {
+            background-color: #93b75a;
+            color: white;
+            height: 3.2rem;
+            width: 8rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #7a9f3f;
+        }
+
+        .github-link {
+            text-align: center;
+            padding-top: 1rem;
+        }
+
+        .github-link a {
+            font-size: 1.1rem;
+            text-decoration: none;
+        }
+
+    </style>
+</head>
+
+<script>
+    function toggleCustomFilename() {
+        document.getElementById("custom_filename").disabled = document.getElementById("preserve_filename").checked;
+    }
+</script>
+
+<script>
+    function toggleCustomFilename() {
+        var preserveFilenameCheckbox = document.getElementById("preserve_filename");
+        var customFilenameInput = document.getElementById("custom_filename");
+        
+        customFilenameInput.disabled = preserveFilenameCheckbox.checked;
+        
+        if (preserveFilenameCheckbox.checked) {
+            customFilenameInput.value = "";
+        }
+    }
+</script>
+
+<body>
+    <div class="container">
+        <h1>chu~</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" id="file" required><br><br>
+            <br><br>
+            
+            <input type="password" name="password" placeholder="Password" required><br>
+
+            <br><br>
+            <input type="submit" value="Upload">
+
+            <h4>Optional settings</h4>
+            <input type="text" name="custom_extension" placeholder="Custom extension"><br>
+            <label for="preserve_filename">
+                <input type="checkbox" name="preserve_filename" id="preserve_filename" value="1" onchange="toggleCustomFilename()">
+                Preserve filename.
+            </label>
+            <br><br>
+            <input type="text" name="custom_filename" id="custom_filename" placeholder="Custom filename"><br>
+            <label for="do_not_redirect">
+                <input type="checkbox" name="do_not_redirect" id="do_not_redirect" value="1">
+                Do not redirect to file (returns the URL).
+            </label>
+        </form>
+        <div class="github-link">
+            <p><a href="https://github.com/welpo/chu">View the project on GitHub</a>.</p>
+        </div>
+    </div>
+</body>
