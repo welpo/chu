@@ -72,7 +72,7 @@
             margin-right: 6px;
         }
 
-        label > span {
+        label>span {
             margin-left: 10px;
         }
 
@@ -105,6 +105,20 @@
             text-decoration: none;
         }
 
+        @media screen and (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+
+            input[type="submit"] {
+                width: 100%;
+            }
+
+            input[type="file"] {
+                padding: 2rem;
+            }
+        }
+
     </style>
 </head>
 
@@ -118,9 +132,9 @@
     function toggleCustomFilename() {
         var preserveFilenameCheckbox = document.getElementById("preserve_filename");
         var customFilenameInput = document.getElementById("custom_filename");
-        
+
         customFilenameInput.disabled = preserveFilenameCheckbox.checked;
-        
+
         if (preserveFilenameCheckbox.checked) {
             customFilenameInput.value = "";
         }
@@ -133,7 +147,7 @@
         <form method="POST" enctype="multipart/form-data">
             <input type="file" name="file" id="file" required><br><br>
             <br><br>
-            
+
             <input type="password" name="password" placeholder="Password" required><br>
 
             <br><br>
@@ -142,7 +156,8 @@
             <h4>Optional settings</h4>
             <input type="text" name="custom_extension" placeholder="Custom extension"><br>
             <label for="preserve_filename">
-                <input type="checkbox" name="preserve_filename" id="preserve_filename" value="1" onchange="toggleCustomFilename()">
+                <input type="checkbox" name="preserve_filename" id="preserve_filename" value="1"
+                    onchange="toggleCustomFilename()">
                 Preserve filename.
             </label>
             <br><br>
